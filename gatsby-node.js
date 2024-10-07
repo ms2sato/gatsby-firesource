@@ -14,11 +14,22 @@ exports.sourceNodes = async (
 ) => {
 
   try{
-    if (firebase.apps || !firebase.apps.length) {
-      firebase.initializeApp({ credential: firebase.credential.cert(credential) });
+    if (!firebase.apps || !firebase.apps.length) {
+      if(credential){
+        report.info('Using `credential` property found in gatsby-config.js to initialize Firebase.');
+        firebase.initializeApp({ credential: firebase.credential.cert(credential) });
+      } else {
+        report.info('No `credential` property found in gatsby-config.js. Using default Firebase configuration.');
+        firebase.initializeApp();
+      }
     }
   } catch (e) {
-    report.warn('Could not initialize Firebase. Please check `credential` property in gatsby-config.js');
+    if(credential) {
+      report.warn('Could not initialize Firebase. Please check `credential` property in gatsby-config.js');
+    } else {
+      report.warn('Could not initialize Firebase. Please check Firebase configuration ex. GOOGLE_APPLICATION_CREDENTIALS');
+    }
+
     report.warn(e);
     return;
   }
