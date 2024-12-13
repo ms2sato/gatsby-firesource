@@ -1,33 +1,35 @@
-const report = require('gatsby-cli/lib/reporter');
-const firebase = require('firebase-admin');
-const crypto = require('crypto');
+const report = require("gatsby-cli/lib/reporter");
+const firebase = require("firebase-admin");
+const crypto = require("crypto");
 
-const getDigest = id =>
-  crypto
-    .createHash('md5')
-    .update(id)
-    .digest('hex');
+const getDigest = (id) => crypto.createHash("md5").update(id).digest("hex");
 
-exports.sourceNodes = async (
-  { actions },
-  { types, credential }
-) => {
-
-  try{
+exports.sourceNodes = async ({ actions }, { types, credential }) => {
+  try {
     if (!firebase.apps || !firebase.apps.length) {
-      if(credential){
-        report.info('Using `credential` property found in gatsby-config.js to initialize Firebase.');
-        firebase.initializeApp({ credential: firebase.credential.cert(credential) });
+      if (credential) {
+        report.info(
+          "Using `credential` property found in gatsby-config.js to initialize Firebase."
+        );
+        firebase.initializeApp({
+          credential: firebase.credential.cert(credential),
+        });
       } else {
-        report.info('No `credential` property found in gatsby-config.js. Using default Firebase configuration.');
+        report.info(
+          "No `credential` property found in gatsby-config.js. Using default Firebase configuration."
+        );
         firebase.initializeApp();
       }
     }
   } catch (e) {
-    if(credential) {
-      report.warn('Could not initialize Firebase. Please check `credential` property in gatsby-config.js');
+    if (credential) {
+      report.warn(
+        "Could not initialize Firebase. Please check `credential` property in gatsby-config.js"
+      );
     } else {
-      report.warn('Could not initialize Firebase. Please check Firebase configuration ex. GOOGLE_APPLICATION_CREDENTIALS');
+      report.warn(
+        "Could not initialize Firebase. Please check Firebase configuration ex. GOOGLE_APPLICATION_CREDENTIALS"
+      );
     }
 
     report.warn(e);
@@ -39,28 +41,37 @@ exports.sourceNodes = async (
   const { createNode } = actions;
 
   const promises = types.map(
-    async ({ collection, type, map = node => node }) => {
+    async ({ collection, type, map = (node) => node }) => {
       const snapshot = await db.collection(collection).get();
       for (let doc of snapshot.docs) {
-        const contentDigest = getDigest(doc.id);
-        createNode(
-          Object.assign({}, map(doc.data()), {
-            id: doc.id,
-            parent: null,
-            children: [],
-            internal: {
-              type,
-              contentDigest,
-            },
-          })
-        );
+        const data = doc.data();
+        try {
+          const contentDigest = getDigest(doc.id);
+          createNode(
+            Object.assign({}, map(data), {
+              id: doc.id,
+              parent: null,
+              children: [],
+              internal: {
+                type,
+                contentDigest,
+              },
+            })
+          );
 
-        Promise.resolve();
+          Promise.resolve();
+        } catch (e) {
+          report.warn(
+            `Could not create node for document ${
+              doc.id
+            };\n${JSON.stringify(data, true, 2)}`
+          );
+          report.warn(e);
+          throw e;
+        }
       }
     }
   );
 
   await Promise.all(promises);
-
-  return;
 };
