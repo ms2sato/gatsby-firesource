@@ -62,7 +62,7 @@ exports.sourceNodes = async ({ actions }, { types, credential }) => {
           Promise.resolve();
         } catch (e) {
           report.warn(
-            `Could not create node for document ${
+            `Could not create ${collection} node for document ${
               doc.id
             };\n${JSON.stringify(data, true, 2)}`
           );
