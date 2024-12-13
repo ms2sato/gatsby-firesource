@@ -45,10 +45,18 @@ exports.sourceNodes = async ({ actions }, { types, credential }) => {
       const snapshot = await db.collection(collection).get();
       for (let doc of snapshot.docs) {
         const data = doc.data();
+        const contentDigest = getDigest(doc.id);
         try {
-          const contentDigest = getDigest(doc.id);
+          const converted = map(data);
+          if (converted === null || converted === undefined) {
+            report.warn(
+              `[skip] ${collection}/${doc.id}; map function returned null or undefined`
+            );
+            continue;
+          }
+
           createNode(
-            Object.assign({}, map(data), {
+            Object.assign({}, converted, {
               id: doc.id,
               parent: null,
               children: [],
@@ -58,8 +66,6 @@ exports.sourceNodes = async ({ actions }, { types, credential }) => {
               },
             })
           );
-
-          Promise.resolve();
         } catch (e) {
           report.warn(
             `Could not create ${collection} node for document ${
